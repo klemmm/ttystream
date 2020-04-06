@@ -1,0 +1,9 @@
+Minimalist tty share/cast over websocket.
+
+Usage (server):
+
+./server.py 1234
+
+Usage (client):
+
+./client.py ws://localhost:1234/
