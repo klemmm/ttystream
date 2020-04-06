@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import time
 import pty
 import asyncio
 import fcntl
@@ -10,11 +11,13 @@ import os
 import socket
 import threading
 import websockets
+import queue
 
 HEIGHT=24
 WIDTH=80
 SHELL="/bin/bash"
 
+q = queue.Queue(maxsize=10)
 
 loop = asyncio.get_event_loop()
 class Queue:
@@ -44,20 +47,53 @@ def dispatch(data):
         q.enqueue_mt(data)
 
 sizeset = False
+sent = 0
+lastreset = 0.0
+idle_until = 0.0
+idle = False
 def master_read(fd):
     global sizeset
+    global q
+    global sent
+    global lastreset
+    global idle
+    global idle_until
     if not sizeset:
         winsize = struct.pack("HHHH", HEIGHT, WIDTH, 0, 0)
         fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
         sizeset = True
     data = os.read(fd, 1024)
     stream.feed(data.decode(encoding="utf-8", errors="ignore"))
-    dispatch(data)
+    sent += len(data)
+    if sent > 512:
+        idle = True
+    now = time.time()
+    if now - lastreset > 0.5:
+        sent = 0
+        lastreet = now
+    if not idle:
+        q.put_nowait(data)    
     return data
     
 screen = pyte.Screen(WIDTH, HEIGHT)
 stream = pyte.Stream(screen)
 
+class DispatcherThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+    def run(self):
+        global q
+        global idle
+        while True:
+            try:
+                data = q.get(timeout=1.0)
+                dispatch(data)
+            except:
+                if idle:
+                    idle = False
+                    dispatch(resync())
+
+        
 tty_has_quit = False
 class TtyThread(threading.Thread):
     def __init__(self):
@@ -71,11 +107,10 @@ class TtyThread(threading.Thread):
         os._exit(0)
 
 
-clients = []
-async def serve(ws, path):
-    first = True
+def resync():
     buf = ""
     lastchar = None
+    first = True
     for y in range(len(screen.buffer)):
         if y > 0:
             buf += "\n"
@@ -150,7 +185,11 @@ async def serve(ws, path):
             buf += current.data
             lastchar = current
 
-    await ws.send(buf.encode("utf-8") + b"\x1B[" + str(screen.cursor.y + 1).encode("utf-8") + b";" + str(screen.cursor.x + 1).encode("utf-8") + b"H")
+    return b"\x1B[H\x1B[2J" + buf.encode("utf-8") + b"\x1B[" + str(screen.cursor.y + 1).encode("utf-8") + b";" + str(screen.cursor.x + 1).encode("utf-8") + b"H"
+
+clients = []
+async def serve(ws, path):
+    await ws.send(resync())
     q = Queue()
     clients.append(q)
     try:
@@ -167,6 +206,8 @@ if rows < HEIGHT or cols < WIDTH:
 
 start_server = websockets.serve(serve, "0.0.0.0", int(sys.argv[1]))
 asyncio.ensure_future(start_server)
+disp_thread = DispatcherThread()
+disp_thread.start()
 tty_thread = TtyThread()
 tty_thread.start()
 loop.run_forever()

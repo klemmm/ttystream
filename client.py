@@ -32,7 +32,6 @@ if rows < HEIGHT or cols < WIDTH:
 async def client():
     uri = sys.argv[1]
     async with websockets.connect(uri) as ws:
-        sys.stdout.buffer.write(b"\x1B[H\x1B[2J")
         try:
             while True:
                 data = await ws.recv()
