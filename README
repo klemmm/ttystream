@@ -12,3 +12,10 @@ Usage (server):
 Usage (client):
 
 ./client.py ws://localhost:1234/
+
+
+Usage (web client):
+
+1) Host webclient.html somewhere
+
+2) Go to http://blahblah/webclient.html?host=XXXXX&port=XXXXX (replace XXXXX by server host and port)
