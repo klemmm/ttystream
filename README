@@ -1,5 +1,10 @@
 Minimalist tty share/cast over websocket.
 
+Requirements:
+- Python3 
+- websockets module
+- pyte module (requires version 0.8.1, from https://github.com/selectel/pyte)
+
 Usage (server):
 
 ./server.py 1234

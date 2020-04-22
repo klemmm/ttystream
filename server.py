@@ -113,7 +113,7 @@ def resync():
     first = True
     for y in range(len(screen.buffer)):
         if y > 0:
-            buf += "\n"
+            buf += "\r\n"
         line = screen.buffer[y]
         for x in range(len(line)):
             current = line[x]
