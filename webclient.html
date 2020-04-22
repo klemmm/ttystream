@@ -1,0 +1,32 @@
+<!doctype html>
+  <html>
+    <head>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.css" />
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"></script>
+    </head>
+    <body>
+      <script>
+        var term = new Terminal({cols:100, rows:32});
+        term.open(document.getElementById('terminal'));
+        term.write("Connecting to server ");
+        var query = window.location.search;
+        var urlParams = new URLSearchParams(query);
+        var wsurl = "ws://" + urlParams.get("host") + ":" + urlParams.get("port");
+        term.write(wsurl + " ...");
+        var sock = new WebSocket(wsurl);
+        sock.onopen = function() {
+          term.write("Connected.\r\n");
+        };
+        sock.onclose = function() {
+          term.write("Connection closed by the server.\r\n");
+        };
+        sock.onerror = function() {
+          term.write("Connection error.\r\n");
+        };
+        sock.onmessage = function(msg) {
+          msg.data.text().then(text => term.write(text));
+        };
+        
+      </script>
+    </body>
+  </html>
