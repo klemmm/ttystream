@@ -14,6 +14,8 @@
         var wsurl = "ws://" + urlParams.get("host") + ":" + urlParams.get("port");
         term.write(wsurl + " ...");
         var sock = new WebSocket(wsurl);
+        sock.binaryType = 'arraybuffer';
+        var td = new TextDecoder("utf8");
         sock.onopen = function() {
           term.write("Connected.\r\n");
         };
@@ -24,7 +26,7 @@
           term.write("Connection error.\r\n");
         };
         sock.onmessage = function(msg) {
-          msg.data.text().then(text => term.write(text));
+          term.write(td.decode(msg.data));
         };
         
       </script>
